@@ -1,76 +1,49 @@
-const chatbotToggler = document.querySelector(".chatbot-toggler");
-const closeBtn = document.querySelector(".close-btn");
-const chatbox = document.querySelector(".chatbox");
-const chatInput = document.querySelector(".chat-input textarea");
-const sendChatBtn = document.querySelector(".chat-input span");
+const chatbot = document.getElementById('chatbot');
+const conversation = document.getElementById('conversation');
+const inputForm = document.getElementById('input-form');
+const inputField = document.getElementById('input-field');
 
-let userMessage = null;
-const API_KEY = "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";
-const inputInitHeight = chatInput.scrollHeight;
 
-const createChatLi = (message, className) => {
-    const chatLi = document.createElement("li");
-    chatLi.classList.add("chat", `${className}`);
-    let chatContent = className === "outgoing" ? `<p></p>` : `<span class="material-symbols-outlined">smart_toy</span><p></p>`;
-    chatLi.innerHTML = chatContent;
-    chatLi.querySelector("p").textContent = message;
-    return chatLi;
-}
+inputForm.addEventListener('submit', function(event) {
 
-const generateResponse = (chatElement) => {
-    const API_URL = "https://api.openai.com/v1/chat/completions";
-    const messageElement = chatElement.querySelector("p");
+  event.preventDefault();
 
-    const requestOptions = {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${API_KEY}`
-        },
-        body: JSON.stringify({
-            model: "gpt-3.5-turbo",
-            messages: [{role: "user", content: userMessage}],
-        })
-    }
+  const input = inputField.value;
 
-    fetch(API_URL, requestOptions).then(res => res.json()).then(data => {
-        messageElement.textContent = data.choices[0].message.content.trim();
-    }).catch(() => {
-        messageElement.classList.add("error");
-        messageElement.textContent = "Oops! Something went wrong. Please try again.";
-    }).finally(() => chatbox.scrollTo(0, chatbox.scrollHeight));
-}
+  inputField.value = '';
+  const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: "2-digit" });
 
-const handleChat = () => {
-    userMessage = chatInput.value.trim(); 
-    if(!userMessage) return;
+  let message = document.createElement('div');
+  message.classList.add('chatbot-message', 'user-message');
+  message.innerHTML = `<p class="chatbot-text" sentTime="${currentTime}">${input}</p>`;
+  conversation.appendChild(message);
 
-    chatInput.value = "";
-    chatInput.style.height = `${inputInitHeight}px`;
 
-    chatbox.appendChild(createChatLi(userMessage, "outgoing"));
-    chatbox.scrollTo(0, chatbox.scrollHeight);
+  const response = generateResponse(input);
+
+  message = document.createElement('div');
+  message.classList.add('chatbot-message','chatbot');
+  message.innerHTML = `<p class="chatbot-text" sentTime="${currentTime}">${response}</p>`;
+  conversation.appendChild(message);
+  message.scrollIntoView({behavior: "smooth"});
+});
+
+function generateResponse(input) {
+    const responses = [
+      "Hello, how can I help you today? 😊",
+      "I'm sorry, I didn't understand your question. Could you please rephrase it? 😕",
+      "I'm here to assist you with any questions or concerns you may have. 📩",
+      "I'm sorry, I'm not able to browse the internet or access external information. Is there anything else I can help with? 💻",
+      "What would you like to know? 🤔",
+      "I'm sorry, I'm not programmed to handle offensive or inappropriate language. Please refrain from using such language in our conversation. 🚫",
+      "I'm here to assist you with any questions or problems you may have. How can I help you today? 🚀",
+      "Is there anything specific you'd like to talk about? 💬",
+      "I'm happy to help with any questions or concerns you may have. Just let me know how I can assist you. 😊",
+      "I'm here to assist you with any questions or problems you may have. What can I help you with today? 🤗",
+      "Is there anything specific you'd like to ask or talk about? I'm here to help with any questions or concerns you may have. 💬",
+      "I'm here to assist you with any questions or problems you may have. How can I help you today? 💡",
+    ];
     
-    setTimeout(() => {
-        const incomingChatLi = createChatLi("Thinking...", "incoming");
-        chatbox.appendChild(incomingChatLi);
-        chatbox.scrollTo(0, chatbox.scrollHeight);
-        generateResponse(incomingChatLi);
-    }, 600);
-}
-
-chatInput.addEventListener("input", () => {
-    chatInput.style.height = `${inputInitHeight}px`;
-    chatInput.style.height = `${chatInput.scrollHeight}px`;
-});
-
-chatInput.addEventListener("keydown", (e) => {
-    if(e.key === "Enter" && !e.shiftKey && window.innerWidth > 800) {
-        e.preventDefault();
-        handleChat();
-    }
-});
-
-sendChatBtn.addEventListener("click", handleChat);
-closeBtn.addEventListener("click", () => document.body.classList.remove("show-chatbot"));
-chatbotToggler.addEventListener("click", () => document.body.classList.toggle("show-chatbot"));
+    return responses[Math.floor(Math.random() * responses.length)];
+  }
+  
