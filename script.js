@@ -1,79 +1,76 @@
-// @ts-nocheck
+const chatbotToggler = document.querySelector(".chatbot-toggler");
+const closeBtn = document.querySelector(".close-btn");
+const chatbox = document.querySelector(".chatbox");
+const chatInput = document.querySelector(".chat-input textarea");
+const sendChatBtn = document.querySelector(".chat-input span");
 
-const johnSelectorBtn = document.querySelector('#john-selector')
-const janeSelectorBtn = document.querySelector('#jane-selector')
-const chatHeader = document.querySelector('.chat-header')
-const chatMessages = document.querySelector('.chat-messages')
-const chatInputForm = document.querySelector('.chat-input-form')
-const chatInput = document.querySelector('.chat-input')
-const clearChatBtn = document.querySelector('.clear-chat-button')
+let userMessage = null;
+const API_KEY = "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";
+const inputInitHeight = chatInput.scrollHeight;
 
-const messages = JSON.parse(localStorage.getItem('messages')) || []
-
-const createChatMessageElement = (message) => `
-  <div class="message ${message.sender === 'John' ? 'blue-bg' : 'gray-bg'}">
-    <div class="message-sender">${message.sender}</div>
-    <div class="message-text">${message.text}</div>
-    <div class="message-timestamp">${message.timestamp}</div>
-  </div>
-`
-
-window.onload = () => {
-  messages.forEach((message) => {
-    chatMessages.innerHTML += createChatMessageElement(message)
-  })
+const createChatLi = (message, className) => {
+    const chatLi = document.createElement("li");
+    chatLi.classList.add("chat", `${className}`);
+    let chatContent = className === "outgoing" ? `<p></p>` : `<span class="material-symbols-outlined">smart_toy</span><p></p>`;
+    chatLi.innerHTML = chatContent;
+    chatLi.querySelector("p").textContent = message;
+    return chatLi;
 }
 
-let messageSender = 'John'
+const generateResponse = (chatElement) => {
+    const API_URL = "https://api.openai.com/v1/chat/completions";
+    const messageElement = chatElement.querySelector("p");
 
-const updateMessageSender = (name) => {
-  messageSender = name
-  chatHeader.innerText = `${messageSender} chatting...`
-  chatInput.placeholder = `Type here, ${messageSender}...`
+    const requestOptions = {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${API_KEY}`
+        },
+        body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: [{role: "user", content: userMessage}],
+        })
+    }
 
-  if (name === 'John') {
-    johnSelectorBtn.classList.add('active-person')
-    janeSelectorBtn.classList.remove('active-person')
-  }
-  if (name === 'Jane') {
-    janeSelectorBtn.classList.add('active-person')
-    johnSelectorBtn.classList.remove('active-person')
-  }
-
-  /* auto-focus the input field */
-  chatInput.focus()
+    fetch(API_URL, requestOptions).then(res => res.json()).then(data => {
+        messageElement.textContent = data.choices[0].message.content.trim();
+    }).catch(() => {
+        messageElement.classList.add("error");
+        messageElement.textContent = "Oops! Something went wrong. Please try again.";
+    }).finally(() => chatbox.scrollTo(0, chatbox.scrollHeight));
 }
 
-johnSelectorBtn.onclick = () => updateMessageSender('John')
-janeSelectorBtn.onclick = () => updateMessageSender('Jane')
+const handleChat = () => {
+    userMessage = chatInput.value.trim(); 
+    if(!userMessage) return;
 
-const sendMessage = (e) => {
-  e.preventDefault()
+    chatInput.value = "";
+    chatInput.style.height = `${inputInitHeight}px`;
 
-  const timestamp = new Date().toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })
-  const message = {
-    sender: messageSender,
-    text: chatInput.value,
-    timestamp,
-  }
-
-  /* Save message to local storage */
-  messages.push(message)
-  localStorage.setItem('messages', JSON.stringify(messages))
-
-  /* Add message to DOM */
-  chatMessages.innerHTML += createChatMessageElement(message)
-
-  /* Clear input field */
-  chatInputForm.reset()
-
-  /*  Scroll to bottom of chat messages */
-  chatMessages.scrollTop = chatMessages.scrollHeight
+    chatbox.appendChild(createChatLi(userMessage, "outgoing"));
+    chatbox.scrollTo(0, chatbox.scrollHeight);
+    
+    setTimeout(() => {
+        const incomingChatLi = createChatLi("Thinking...", "incoming");
+        chatbox.appendChild(incomingChatLi);
+        chatbox.scrollTo(0, chatbox.scrollHeight);
+        generateResponse(incomingChatLi);
+    }, 600);
 }
 
-chatInputForm.addEventListener('submit', sendMessage)
+chatInput.addEventListener("input", () => {
+    chatInput.style.height = `${inputInitHeight}px`;
+    chatInput.style.height = `${chatInput.scrollHeight}px`;
+});
 
-clearChatBtn.addEventListener('click', () => {
-  localStorage.clear()
-  chatMessages.innerHTML = ''
-})
+chatInput.addEventListener("keydown", (e) => {
+    if(e.key === "Enter" && !e.shiftKey && window.innerWidth > 800) {
+        e.preventDefault();
+        handleChat();
+    }
+});
+
+sendChatBtn.addEventListener("click", handleChat);
+closeBtn.addEventListener("click", () => document.body.classList.remove("show-chatbot"));
+chatbotToggler.addEventListener("click", () => document.body.classList.toggle("show-chatbot"));
